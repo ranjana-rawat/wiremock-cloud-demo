@@ -43,7 +43,7 @@ jobs:
       - name: Authenticate with WireMock Cloud
         # The API token is stored as a GitHub Actions secret.
         # Retrieve yours from: https://app.wiremock.cloud/account/security
-        run: wiremock config set api_token "${{ secrets.EXAMPLE_API_TOKEN }}"
+        run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
 
       # ── Pull mock APIs by explicit ID ──────────────────────
       #
