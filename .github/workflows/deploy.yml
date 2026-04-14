@@ -37,13 +37,8 @@ jobs:
 
       # ── WireMock CLI setup ─────────────────────────────────
 
-<<<<<<< HEAD:.github/workflows/wiremocktest.yml
       - name: Install WireMock CLI
         run: npm install --global @wiremock/cli
-=======
-      - name: Install app dependencies
-        run: npm ci
->>>>>>> 3f2504e (Update GitHub Actions workflow to use Node.js 24 and improve mock API setup; add .gitignore and package.json for project dependencies):.github/workflows/wiremock-ci.yml
 
       - name: Authenticate with WireMock Cloud
         # The API token is stored as a GitHub Actions secret.
@@ -64,11 +59,7 @@ jobs:
 
       - name: Start WireMock local playback
         run: |
-<<<<<<< HEAD:.github/workflows/wiremocktest.yml
           nohup wiremock run > wiremock.log 2>&1 &
-=======
-          nohup npx wiremock run > wiremock.log 2>&1 &
->>>>>>> 3f2504e (Update GitHub Actions workflow to use Node.js 24 and improve mock API setup; add .gitignore and package.json for project dependencies):.github/workflows/wiremock-ci.yml
           # Wait until the mock API port is accepting connections
           timeout 30 bash -c 'until nc -z localhost 8081 ; do sleep 1; done'
           echo "✓ Mock servers ready on :8081 (example-mock-api)"
@@ -91,8 +82,4 @@ jobs:
       - name: Note
         run: |
           echo "WireMock local mock playback is ready."
-<<<<<<< HEAD:.github/workflows/wiremocktest.yml
           echo "If you want to run application tests, add a step here that uses EXAMPLE_API_BASE_URL=http://localhost:8081."
-=======
-          echo "If you want to run application tests, add a step here that uses EXAMPLE_API_BASE_URL=http://localhost:8081."
->>>>>>> 3f2504e (Update GitHub Actions workflow to use Node.js 24 and improve mock API setup; add .gitignore and package.json for project dependencies):.github/workflows/wiremock-ci.yml
