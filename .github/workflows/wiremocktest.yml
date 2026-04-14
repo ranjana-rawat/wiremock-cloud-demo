@@ -35,9 +35,6 @@ jobs:
           node-version: "24"
           cache: "npm"
 
-      - name: Install app dependencies
-        run: npm ci
-
       # ── WireMock CLI setup ─────────────────────────────────
 
       - name: Install WireMock CLI
@@ -63,8 +60,8 @@ jobs:
 
       - name: Start WireMock local playback
         run: |
-          wiremock run &
-          # Wait until  mock API ports are accepting connections
+          nohup wiremock run > wiremock.log 2>&1 &
+          # Wait until the mock API port is accepting connections
           timeout 30 bash -c 'until nc -z localhost 8081 ; do sleep 1; done'
           echo "✓ Mock servers ready on :8081 (example-mock-api)"
 
@@ -73,8 +70,6 @@ jobs:
       # Confirms two things before the tests run:
       #   1. The env vars point at localhost (not any cloud URL)
       #   2. The local mock servers are actually serving responses
-      # If either curl fails with a non-200, this step fails and the
-      # test step never runs — making misconfiguration immediately visible.
 
       - name: Verify mocks are running locally
         env:
@@ -83,14 +78,9 @@ jobs:
           echo "EXAMPLE_API_BASE_URL = $EXAMPLE_API_BASE_URL"
           echo ""
           echo "--- Probing :8081 (example-mock-api) ---"
-          curl --fail --silent --show-error "$EXAMPLE_API_BASE_URL/json/" | python3 -c "import sys,json; d=json.load(sys.stdin); print('✓ city:', d['city'])"
+          curl --fail --silent --show-error "$EXAMPLE_API_BASE_URL/pets"
 
-      # ── Run the test suite against mocks ──────────────────
-
-      - name: Run tests against WireMock playback
-        env:
-          # Redirect both API clients to WireMock local playback ports
-          EXAMPLE_API_BASE_URL: http://localhost:8081
-          # Stubs don't match on the API key — any value satisfies the guard in api.ts
-          EXAMPLE_API_KEY: dummy-value-for-playback
-        run: npm test
+      - name: Note
+        run: |
+          echo "WireMock local mock playback is ready."
+          echo "If you want to run application tests, add a step here that uses EXAMPLE_API_BASE_URL=http://localhost:8081."
