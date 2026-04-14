@@ -1,0 +1,228 @@
+---
+mappings:
+- id: "36503318-dee0-4f84-a6d2-f0667a0a47c3"
+  name: "Create a pet"
+  request:
+    urlPathTemplate: "/pets"
+    method: "POST"
+  response:
+    status: 201
+    body: ""
+    headers:
+      Content-Type: "application/json"
+  persistent: true
+  priority: 5
+  metadata:
+    mocklab:
+      created:
+        at: "2026-03-12T14:03:21.364167605Z"
+        via: "IMPORT"
+        by: "2mwvjd"
+      oas:
+        operationId: "createPets"
+      response-example-attachment: "default"
+- id: "6bb04c04-0bbb-443f-b0e2-93601b119dc7"
+  name: "Info for a specific pet"
+  request:
+    urlPathTemplate: "/pets/{petId}"
+    method: "GET"
+    pathParameters:
+      petId:
+        equalTo: "avj4"
+  response:
+    status: 200
+    body: |-
+      {
+        "id" : 1592404345075894207,
+        "name" : "Johnathan Conroy",
+        "tag" : "soluta"
+      }
+    headers:
+      Content-Type: "application/json"
+  persistent: true
+  priority: 5
+  metadata:
+    mocklab:
+      created:
+        at: "2026-03-12T14:03:21.364012028Z"
+        via: "IMPORT"
+        by: "2mwvjd"
+      oas:
+        operationId: "showPetById"
+        schema:
+          required:
+          - "id"
+          - "name"
+          type: "object"
+          properties:
+            id:
+              type: "integer"
+              format: "int64"
+            name:
+              type: "string"
+            tag:
+              type: "string"
+      response-example-attachment: "default"
+- id: "08daaa93-a215-4530-baf7-3c4d580bcb8a"
+  name: "List all pets"
+  request:
+    urlPathTemplate: "/pets/id"
+    method: "GET"
+    customMatcher:
+      name: "custom-and-matcher"
+      parameters:
+        matchers:
+        - name: "data-exists"
+          parameters:
+            id: "pyd3z"
+            matcherEnabled: true
+            query: "id={id}"
+  response:
+    status: 200
+    body: |-
+      {
+        "id": "{{dataSource.id}}",
+        "name": "{{dataSource.name}}",
+        "email": "{{dataSource.email}}",
+        "accountType": "{{dataSource.accountType}}",
+        "balance": "{{dataSource.balance}}"
+      }
+    headers:
+      Content-Type: "application/json"
+    transformers:
+    - "response-template"
+    transformerParameters:
+      graphQlMockDataTransformerParameters: {}
+  persistent: true
+  priority: 5
+  metadata:
+    mocklab:
+      created:
+        at: "2026-03-12T14:03:21.364370486Z"
+        via: "IMPORT"
+        by: "2mwvjd"
+      updated:
+        at: "2026-03-17T12:02:13.14472419Z"
+        via: "ADMIN_API"
+        by: "2mwvjd"
+      oas:
+        operationId: "listPets"
+        schema:
+          maxItems: 100
+          type: "array"
+          items:
+            required:
+            - "id"
+            - "name"
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+                format: "int64"
+              name:
+                type: "string"
+              tag:
+                type: "string"
+      response-example-attachment: "default"
+- id: "ac764e0c-7296-4485-8224-4173c86a1879"
+  name: "List all pets - default"
+  request:
+    urlPathTemplate: "/pets"
+    method: "GET"
+  response:
+    status: 200
+    body: |-
+      [ {
+        "id" : 3144385785155485713,
+        "name" : "Reiko Stoltenberg",
+        "tag" : "possimus"
+      } ]
+    headers:
+      Content-Type: "application/json"
+  persistent: true
+  priority: 6
+  metadata:
+    mocklab:
+      created:
+        at: "2026-03-12T14:03:21.364277781Z"
+        via: "IMPORT"
+        by: "2mwvjd"
+      oas:
+        operationId: "listPets"
+        schema:
+          maxItems: 100
+          type: "array"
+          items:
+            required:
+            - "id"
+            - "name"
+            type: "object"
+            properties:
+              id:
+                type: "integer"
+                format: "int64"
+              name:
+                type: "string"
+              tag:
+                type: "string"
+      oas-detached: true
+- id: "00b3b136-2bdc-4a34-ae6b-12f6d50fd6d8"
+  name: "Create a pet - default"
+  request:
+    urlPathTemplate: "/pets"
+    method: "POST"
+  response:
+    status: 201
+    body: ""
+    headers:
+      Content-Type: "application/json"
+  persistent: true
+  priority: 6
+  metadata:
+    mocklab:
+      created:
+        at: "2026-03-12T14:03:21.364097592Z"
+        via: "IMPORT"
+        by: "2mwvjd"
+      oas:
+        operationId: "createPets"
+      oas-detached: true
+- id: "feca508b-a917-4f18-9e78-a3bb63fc9c19"
+  name: "Info for a specific pet - default"
+  request:
+    urlPathTemplate: "/pets/{petId}"
+    method: "GET"
+  response:
+    status: 200
+    body: |-
+      {
+        "id" : 1592404345075894207,
+        "name" : "Johnathan Conroy",
+        "tag" : "soluta"
+      }
+    headers:
+      Content-Type: "application/json"
+  persistent: true
+  priority: 6
+  metadata:
+    mocklab:
+      created:
+        at: "2026-03-12T14:03:21.363651259Z"
+        via: "IMPORT"
+        by: "2mwvjd"
+      oas:
+        operationId: "showPetById"
+        schema:
+          required:
+          - "id"
+          - "name"
+          type: "object"
+          properties:
+            id:
+              type: "integer"
+              format: "int64"
+            name:
+              type: "string"
+            tag:
+              type: "string"
+      oas-detached: true

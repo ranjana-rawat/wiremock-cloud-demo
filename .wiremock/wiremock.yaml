@@ -1,0 +1,8 @@
+services:
+  example-mock-api:
+    type: 'Unstructured'
+    name: 'Example Mock API'
+    cloud_id: 'k59q9'
+    description: 'An API consisting of assorted stubs.'
+    path: './example-mock-api'
+    port: 8081
