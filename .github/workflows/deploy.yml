@@ -61,8 +61,8 @@ jobs:
         run: |
           wiremock run &
           # Wait until both mock API ports are accepting connections
-          timeout 30 bash -c 'until nc -z localhost 8080 ; do sleep 1; done'
-          echo "✓ Mock servers ready on :8080 (xample-mock-api)"
+          timeout 30 bash -c 'until nc -z localhost 8081 ; do sleep 1; done'
+          echo "✓ Mock servers ready on :8081 (example-mock-api)"
 
       # ── Verify traffic is routed to localhost, not WireMock Cloud ────
       #
@@ -74,7 +74,7 @@ jobs:
 
       - name: Verify mocks are running locally
         env:
-          EXAMPLE_API_BASE_URL: http://localhost:8080
+          EXAMPLE_API_BASE_URL: http://localhost:8081
         run: |
           echo "EXAMPLE_API_BASE_URL = $EXAMPLE_API_BASE_URL"
           echo ""
@@ -86,7 +86,7 @@ jobs:
       - name: Run tests against WireMock playback
         env:
           # Redirect both API clients to WireMock local playback ports
-          EXAMPLE_API_BASE_URL: http://localhost:8080
+          EXAMPLE_API_BASE_URL: http://localhost:8081
           # Stubs don't match on the API key — any value satisfies the guard in api.ts
           EXAMPLE_API_KEY: mock-key
         run: npm test
