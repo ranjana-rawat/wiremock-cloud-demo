@@ -60,10 +60,10 @@ jobs:
 
       - name: Start WireMock local playback
         run: |
-          wiremock run &
-          # Wait until both mock API ports are accepting connections
-          timeout 30 bash -c 'until  nc -z localhost 8081; do sleep 1; done'
-          echo "✓ Mock servers ready on :8081 (eßxample-mock-api)"
+          wiremock run > wiremock.log 2>&1 &
+          echo "Waiting for WireMock to start..."
+          timeout 60 bash -c 'until curl -s http://localhost:8081 > /dev/null; do sleep 2; done'
+          echo "✓ Mock server ready on :8081 (example-mock-api)"
 
       # ── Verify traffic is routed to localhost, not WireMock Cloud ────
       #
