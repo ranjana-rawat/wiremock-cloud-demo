@@ -1,0 +1,13 @@
+{
+  "name": "wiremock-cloud-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WireMock Cloud demo project",
+  "scripts": {
+    "test": "echo \"No tests configured yet\" && exit 0",
+    "start-mock": "npx wiremock run"
+  },
+  "devDependencies": {
+    "@wiremock/cli": "^0.45.4"
+  }
+}
