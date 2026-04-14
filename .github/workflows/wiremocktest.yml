@@ -91,8 +91,4 @@ jobs:
       - name: Note
         run: |
           echo "WireMock local mock playback is ready."
-<<<<<<< HEAD:.github/workflows/wiremocktest.yml
           echo "If you want to run application tests, add a step here that uses EXAMPLE_API_BASE_URL=http://localhost:8081."
-=======
-          echo "If you want to run application tests, add a step here that uses EXAMPLE_API_BASE_URL=http://localhost:8081."
->>>>>>> 3f2504e (Update GitHub Actions workflow to use Node.js 24 and improve mock API setup; add .gitignore and package.json for project dependencies):.github/workflows/wiremock-ci.yml
