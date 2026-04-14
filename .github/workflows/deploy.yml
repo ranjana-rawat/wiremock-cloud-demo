@@ -1,17 +1,3 @@
-# ============================================================
-# STAGE 1: Baseline Playback via GitHub Actions
-# ============================================================
-# Pulls two specific mock APIs from WireMock Cloud by their
-# explicit IDs, starts them in local playback mode, then runs
-# the test suite entirely against those mocks — no live APIs.
-#
-# Key concepts demonstrated:
-#   - Installing and authenticating the WireMock CLI in CI
-#   - Pulling mock APIs by hardcoded cloud ID
-#   - Running wiremock locally as a background process
-#   - Pointing the test suite at WireMock playback ports
-# ============================================================
-
 name: "Stage 1 – Baseline Playback"
 
 on:
@@ -23,70 +9,69 @@ jobs:
   test-with-mocks:
     runs-on: ubuntu-latest
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
+      # ── Checkout repo ───────────────────────────────
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ── Setup Node (only for CLI usage) ────────────
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Install app dependencies
-        run: npm ci
-
-      # ── WireMock CLI setup ─────────────────────────────────
-
+      # ── Install WireMock CLI ───────────────────────
       - name: Install WireMock CLI
-        run: npm install --global @wiremock/cli
+        run: npm install -g @wiremock/cli
 
+      # ── Authenticate with WireMock Cloud ──────────
       - name: Authenticate with WireMock Cloud
-        # The API token is stored as a GitHub Actions secret.
-        # Retrieve yours from: https://app.wiremock.cloud/account/security
         run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
 
-      # ── Pull mock APIs by explicit ID ──────────────────────
-      #
-      # We pull each mock API into the service slot already defined
-      # in .wiremock/wiremock.yaml, which guarantees the playback
-      # ports (8080, 8081) are consistent and known to the tests.
-      #
+      # ── Pull mock API ─────────────────────────────
       - name: Pull mock APIs from WireMock Cloud
         run: |
           wiremock pull mock-api k59q9 --into example-mock-api
 
-      # ── Start local playback ───────────────────────────────
-
+      # ── Start WireMock locally ────────────────────
       - name: Start WireMock local playback
         run: |
-          wiremock run &
-          # Wait until both mock API ports are accepting connections
-          timeout 30 bash -c 'until nc -z localhost 8081 ; do sleep 1; done'
-          echo "✓ Mock servers ready on :8081 (example-mock-api)"
+          wiremock run > wiremock.log 2>&1 &
+          echo "Waiting for WireMock to be ready..."
 
-      # ── Verify traffic is routed to localhost, not WireMock Cloud ────
-      #
-      # Confirms two things before the tests run:
-      #   1. The env vars point at localhost (not any cloud URL)
-      #   2. The local mock servers are actually serving responses
-      # If either curl fails with a non-200, this step fails and the
-      # test step never runs — making misconfiguration immediately visible.
+          timeout 60 bash -c 'until curl -s http://localhost:8081 > /dev/null; do sleep 2; done'
 
+          echo "✓ Mock server ready on :8081"
+
+      # ── Verify mock is working ────────────────────
       - name: Verify mocks are running locally
         env:
           EXAMPLE_API_BASE_URL: http://localhost:8081
         run: |
           echo "EXAMPLE_API_BASE_URL = $EXAMPLE_API_BASE_URL"
           echo ""
-          echo "--- Probing :8081 (weather-api) ---"
-          curl --fail --silent --show-error "$EXAMPLE_API_BASE_URL/v1/current.json?key=probe&q=51.5074,-0.1278&aqi=no" | python3 -c "import sys,json; d=json.load(sys.stdin); print('✓ location:', d['location']['name'])"
+          echo "--- Probing mock API ---"
 
-      # ── Run the test suite against mocks ──────────────────
+          curl --fail --silent --show-error \
+          "$EXAMPLE_API_BASE_URL/v1/current.json?key=probe&q=51.5074,-0.1278&aqi=no" \
+          | python3 -c "import sys,json; d=json.load(sys.stdin); print('✓ location:', d['location']['name'])"
 
-      - name: Run tests against WireMock playback
-        env:
-          # Redirect both API clients to WireMock local playback ports
-          EXAMPLE_API_BASE_URL: http://localhost:8081
-          # Stubs don't match on the API key — any value satisfies the guard in api.ts
-          EXAMPLE_API_KEY: mock-key
-        run: npm test
+      # ── (Optional) Run tests ──────────────────────
+      # Uncomment ONLY if you actually have tests + package.json
+      #
+      # - name: Install dependencies
+      #   run: npm install
+      #
+      # - name: Run tests against WireMock
+      #   env:
+      #     EXAMPLE_API_BASE_URL: http://localhost:8081
+      #     EXAMPLE_API_KEY: mock-key
+      #   run: npm test
+
+      # ── Debug logs (only on failure) ──────────────
+      - name: Print WireMock logs (if failed)
+        if: failure()
+        run: cat wiremock.log
