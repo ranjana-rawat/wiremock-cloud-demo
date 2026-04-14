@@ -45,18 +45,53 @@ jobs:
           echo "✓ Mock server ready on :8081 (example-mock-api)"
 
       # ── Verify mock is running ───────────────────────────
-      - name: Verify mock is running locally
+      - name: Run dynamic WireMock smoke tests
         env:
           EXAMPLE_API_BASE_URL: http://localhost:8081
         run: |
-          echo "EXAMPLE_API_BASE_URL = $EXAMPLE_API_BASE_URL"
-          echo ""
-          echo "--- Probing mock API ---"
+          echo "Fetching all WireMock mappings..."
 
-          curl --fail --silent --show-error \
-          "$EXAMPLE_API_BASE_URL/v1/current.json?key=probe&q=51.5074,-0.1278&aqi=no" \
-          | python3 -c "import sys,json; d=json.load(sys.stdin); print('✓ location:', d['location']['name'])"
+          MAPPINGS=$(curl -s $EXAMPLE_API_BASE_URL/__admin/mappings)
 
+          echo "$MAPPINGS" > mappings.json
+
+          echo "Extracting endpoints..."
+
+          ENDPOINTS=$(python3 - << 'EOF'
+          import json
+
+          with open("mappings.json") as f:
+              data = json.load(f)
+
+          urls = []
+
+          for m in data.get("mappings", []):
+              req = m.get("request", {})
+              url = req.get("url")
+
+              if url:
+                  urls.append(url)
+
+          # remove duplicates
+          urls = list(set(urls))
+
+          print("\n".join(urls))
+          EOF
+          )
+
+              echo "Found endpoints:"
+              echo "$ENDPOINTS"
+
+              echo ""
+              echo "Running smoke tests..."
+
+              for endpoint in $ENDPOINTS; do
+                echo "Testing $endpoint"
+                curl --fail --silent --show-error \
+                  "$EXAMPLE_API_BASE_URL$endpoint" > /dev/null
+              done
+
+              echo "✓ All WireMock stubs passed smoke test"   
       # ── Run tests ────────────────────────────────────────
       - name: Run tests against WireMock playback
         env:
