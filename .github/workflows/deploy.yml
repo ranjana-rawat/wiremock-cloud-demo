@@ -8,7 +8,6 @@ on:
 jobs:
   test-with-mocks:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,86 +18,78 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Install app dependencies
+      - name: Install dependencies
         run: npm ci
 
-      # ── Import stubs to Wiremock Cloud using npm script ─────────────────────
-      - name: Import mock YAML into WireMock Cloud
+      - name: Upload mock YAML to WireMock Cloud
         run: npm run upload-contract
-      # ── WireMock CLI setup ───────────────────────────────
-      - name: Install WireMock CLI
-        run: npm install --global @wiremock/cli
+
+      - name: Install WireMock CLI + jq
+        run: |
+          npm install --global @wiremock/cli
+          sudo apt-get update
+          sudo apt-get install -y jq netcat
 
       - name: Authenticate with WireMock Cloud
         run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
 
-
-      # ── Pull SINGLE mock API ─────────────────────────────
       - name: Pull mock API from WireMock Cloud
-        run: |
-          wiremock pull mock-api k59q9 --into example-mock-api
+        run: wiremock pull mock-api k59q9 --into example-mock-api
 
-      # ── Start WireMock local playback ────────────────────
       - name: Start WireMock local playback
         run: |
           wiremock run &
-          echo "Waiting for WireMock on 8081..."
-
+          echo "Waiting for WireMock on port 8081..."
           timeout 60 bash -c 'until nc -z localhost 8081; do sleep 1; done'
+          echo "✓ WireMock server started on http://localhost:8081"
 
-          echo "✓ Mock server ready on :8081 (example-mock-api)"
-
-      # ── Verify mock is running ───────────────────────────
-      - name: Run dynamic WireMock smoke tests
+      - name: Fetch mappings with retry
         env:
-          EXAMPLE_API_BASE_URL: http://localhost:8081/
+          BASE_URL: http://localhost:8081
         run: |
-          echo "Fetching all WireMock mappings..."
+          set -euo pipefail
+          echo "Fetching mappings from WireMock..."
 
-          MAPPINGS=$(curl -s $EXAMPLE_API_BASE_URL/__admin/mappings)
+          for i in {1..10}; do
+            if curl --fail --silent --show-error "$BASE_URL/__admin/mappings" -o mappings.json; then
+              echo "✓ Mappings fetched successfully"
+              break
+            fi
 
-          echo "$MAPPINGS" > mappings.json
+            echo "Retrying ($i)..."
+            sleep 2
+          done
 
+          if [[ ! -s mappings.json ]]; then
+            echo "ERROR: mappings.json is empty or missing"
+            cat mappings.json || true
+            exit 1
+          fi
+
+          echo "Validating JSON..."
+          jq . mappings.json > /dev/null
+
+      - name: Extract endpoints
+        run: |
           echo "Extracting endpoints..."
+          ENDPOINTS=$(jq -r '.mappings[].request.url' mappings.json | sort -u)
 
-          ENDPOINTS=$(python3 - << 'EOF'
-          import json
+          echo "Found endpoints:"
+          echo "$ENDPOINTS"
 
-          with open("mappings.json") as f:
-              data = json.load(f)
+          echo "$ENDPOINTS" > endpoints.txt
 
-          urls = []
+      - name: Run smoke tests
+        env:
+          BASE_URL: http://localhost:8081
+        run: |
+          echo "Running smoke tests..."
+          while read -r endpoint; do
+            if [ -n "$endpoint" ]; then
+              echo "Testing $endpoint"
+              curl --fail --silent --show-error "$BASE_URL$endpoint" > /dev/null
+            fi
+          done < endpoints.txt
 
-          for m in data.get("mappings", []):
-              req = m.get("request", {})
-              url = req.get("url")
+          echo "✓ All endpoints passed smoke test"
 
-              if url:
-                  urls.append(url)
-
-          # remove duplicates
-          urls = list(set(urls))
-
-          print("\n".join(urls))
-          EOF
-          )
-
-              echo "Found endpoints:"
-              echo "$ENDPOINTS"
-
-              echo ""
-              echo "Running smoke tests..."
-
-              for endpoint in $ENDPOINTS; do
-                echo "Testing $endpoint"
-                curl --fail --silent --show-error \
-                  "$EXAMPLE_API_BASE_URL$endpoint" > /dev/null
-              done
-
-              echo "✓ All WireMock stubs passed smoke test"   
-      # ── Run tests ────────────────────────────────────────
-      # - name: Run tests against WireMock playback
-      #   env:
-      #     EXAMPLE_API_BASE_URL: http://localhost:8081
-      #     EXAMPLE_API_KEY: mock-key
-      #   run: npm test
