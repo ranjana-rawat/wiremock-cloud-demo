@@ -22,8 +22,9 @@ jobs:
       - name: Install app dependencies
         run: npm ci
 
-
-
+      # ── Import stubs to Wiremock Cloud using npm script ─────────────────────
+      - name: Import mock YAML into WireMock Cloud
+        run: npm run upload-contract
       # ── WireMock CLI setup ───────────────────────────────
       - name: Install WireMock CLI
         run: npm install --global @wiremock/cli
@@ -31,7 +32,6 @@ jobs:
       - name: Authenticate with WireMock Cloud
         run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
 
-      
 
       # ── Pull SINGLE mock API ─────────────────────────────
       - name: Pull mock API from WireMock Cloud

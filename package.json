@@ -5,7 +5,8 @@
   "description": "WireMock Cloud demo project",
   "scripts": {
     "test": "echo \"No tests configured yet\" && exit 0",
-    "start-mock": "npx wiremock run"
+    "start-mock": "npx wiremock run",
+    "upload-contract": "node ./scripts/upload-contract.js"
   },
   "devDependencies": {
     "@wiremock/cli": "^0.45.4"
