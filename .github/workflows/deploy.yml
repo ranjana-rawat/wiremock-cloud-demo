@@ -1,95 +1,107 @@
-name: "Stage 1 – Baseline Playback"
+name: Stage 1 – Baseline Playback
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+push:
+branches: [main]
+workflow_dispatch:
 
 jobs:
-  test-with-mocks:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+test-with-mocks:
+runs-on: ubuntu-latest
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
+steps:
+  # ── Checkout ─────────────────────────────────────────
+  - name: Checkout code
+    uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: npm ci
+  # ── Node setup ───────────────────────────────────────
+  - name: Set up Node.js
+    uses: actions/setup-node@v4
+    with:
+      node-version: "20"
+      cache: "npm"
 
-      # - name: Upload mock YAML to WireMock Cloud
-      #   run: npm run upload-contract
+  - name: Install dependencies
+    run: npm ci
 
-      - name: Install WireMock CLI + jq
-        run: |
-          npm install --global @wiremock/cli
-          sudo apt-get update
-          sudo apt-get install -y jq netcat
+  # ── Upload mocks ─────────────────────────────────────
+  - name: Upload mock YAML to WireMock Cloud
+    run: npm run upload-contract
 
-      - name: Authenticate with WireMock Cloud
-        run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
+  # ── Install WireMock CLI only ────────────────────────
+  - name: Install WireMock CLI
+    run: npm install --global @wiremock/cli
 
-      - name: Pull mock API from WireMock Cloud
-        run: wiremock pull mock-api k59q9 --into example-mock-api
+  # ── Authenticate ─────────────────────────────────────
+  - name: Authenticate with WireMock Cloud
+    run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
 
-      - name: Start WireMock local playback
-        run: |
-          wiremock run &
-          echo "Waiting for WireMock on port 8081..."
-          timeout 60 bash -c 'until nc -z localhost 8081; do sleep 1; done'
-          echo "✓ WireMock server started on http://localhost:8081"
+  # ── Pull mock API ────────────────────────────────────
+  - name: Pull mock API from WireMock Cloud
+    run: wiremock pull mock-api k59q9 --into example-mock-api
 
-      - name: Fetch mappings with retry
-        env:
-          BASE_URL: http://localhost:8081
-        run: |
-          set -euo pipefail
-          echo "Fetching mappings from WireMock..."
+  # ── Start WireMock ───────────────────────────────────
+  - name: Start WireMock local playback
+    run: |
+      wiremock run &
 
-          for i in {1..10}; do
-            if curl --fail --silent --show-error "$BASE_URL/__admin/mappings" -o mappings.json; then
-              echo "✓ Mappings fetched successfully"
-              break
-            fi
+      echo "Waiting for WireMock readiness..."
 
-            echo "Retrying ($i)..."
-            sleep 2
-          done
+      timeout 60 bash -c '
+        until curl --silent --fail http://localhost:8081/__admin/mappings > /dev/null; do
+          sleep 2
+        done
+      '
 
-          if [[ ! -s mappings.json ]]; then
-            echo "ERROR: mappings.json is empty or missing"
-            cat mappings.json || true
-            exit 1
+      echo "✓ WireMock is fully ready"
+
+  # ── Fetch mappings ───────────────────────────────────
+  - name: Fetch mappings
+    run: |
+      echo "Fetching mappings..."
+
+      curl --fail --silent --show-error \
+        http://localhost:8081/__admin/mappings \
+        -o mappings.json
+
+      echo "✓ Mappings fetched"
+
+  # ── Extract endpoints (pure bash) ────────────────────
+  - name: Extract endpoints
+    run: |
+      echo "Extracting endpoints..."
+
+      ENDPOINTS=$(grep -o '"url"[ ]*:[ ]*"[^"]*"' mappings.json | sed 's/.*"url"[ ]*:[ ]*"\([^"]*\)".*/\1/' | sort -u)
+
+      echo "Found endpoints:"
+      echo "$ENDPOINTS"
+
+      echo "$ENDPOINTS" > endpoints.txt
+
+  # ── Smoke test ───────────────────────────────────────
+  - name: Run smoke tests
+    run: |
+      echo "Running smoke tests..."
+
+      FAIL=0
+
+      while read endpoint; do
+        if [ -n "$endpoint" ]; then
+          echo "Testing $endpoint"
+
+          if ! curl --fail --silent --show-error \
+            "http://localhost:8081$endpoint" > /dev/null; then
+            echo " Failed: $endpoint"
+            FAIL=1
+          else
+            echo "Passed: $endpoint"
           fi
+        fi
+      done < endpoints.txt
 
-          echo "Validating JSON..."
-          jq . mappings.json > /dev/null
+      if [ $FAIL -ne 0 ]; then
+        echo "Some endpoints failed"
+        exit 1
+      fi
 
-      - name: Extract endpoints
-        run: |
-          echo "Extracting endpoints..."
-          ENDPOINTS=$(jq -r '.mappings[].request.url' mappings.json | sort -u)
-
-          echo "Found endpoints:"
-          echo "$ENDPOINTS"
-
-          echo "$ENDPOINTS" > endpoints.txt
-
-      - name: Run smoke tests
-        env:
-          BASE_URL: http://localhost:8081
-        run: |
-          echo "Running smoke tests..."
-          while read -r endpoint; do
-            if [ -n "$endpoint" ]; then
-              echo "Testing $endpoint"
-              curl --fail --silent --show-error "$BASE_URL$endpoint" > /dev/null
-            fi
-          done < endpoints.txt
-
-          echo "✓ All endpoints passed smoke test"
-
+      echo "✓ All endpoints passed"
