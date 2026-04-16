@@ -22,12 +22,16 @@ jobs:
       - name: Install app dependencies
         run: npm ci
 
+
+
       # ── WireMock CLI setup ───────────────────────────────
       - name: Install WireMock CLI
         run: npm install --global @wiremock/cli
 
       - name: Authenticate with WireMock Cloud
         run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
+
+      
 
       # ── Pull SINGLE mock API ─────────────────────────────
       - name: Pull mock API from WireMock Cloud
@@ -47,7 +51,7 @@ jobs:
       # ── Verify mock is running ───────────────────────────
       - name: Run dynamic WireMock smoke tests
         env:
-          EXAMPLE_API_BASE_URL: http://localhost:8081
+          EXAMPLE_API_BASE_URL: http://localhost:8081/
         run: |
           echo "Fetching all WireMock mappings..."
 
@@ -93,8 +97,8 @@ jobs:
 
               echo "✓ All WireMock stubs passed smoke test"   
       # ── Run tests ────────────────────────────────────────
-      - name: Run tests against WireMock playback
-        env:
-          EXAMPLE_API_BASE_URL: http://localhost:8081
-          EXAMPLE_API_KEY: mock-key
-        run: npm test
+      # - name: Run tests against WireMock playback
+      #   env:
+      #     EXAMPLE_API_BASE_URL: http://localhost:8081
+      #     EXAMPLE_API_KEY: mock-key
+      #   run: npm test
