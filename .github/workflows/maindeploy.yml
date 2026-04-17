@@ -21,21 +21,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # - name: Upload mock YAML to WireMock Cloud
-      #   run: npm run upload-contract
+      - name: Upload mock YAML to WireMock Cloud
+        run: npm run upload-contract
 
       - name: Install WireMock CLI
-        run: npx --yes @wiremock/cli --version
+        run: npm install --global @wiremock/cli
 
       - name: Authenticate with WireMock Cloud
-        run: npx --yes @wiremock/cli config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
+        run: wiremock config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
 
       - name: Pull mock API from WireMock Cloud
-        run: npx --yes @wiremock/cli pull mock-api k59q9 --into example-mock-api
+        run: wiremock pull mock-api k59q9 --into example-mock-api
 
       - name: Start WireMock local playback
         run: |
-          npx --yes @wiremock/cli run &
+          wiremock run &
           echo "Waiting for WireMock readiness..."
           timeout 60 bash -c 'until curl --silent --fail http://localhost:8081/__admin/mappings > /dev/null; do sleep 2; done'
           echo "✓ WireMock is fully ready"
