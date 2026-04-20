@@ -27,9 +27,12 @@ jobs:
       - name: Install WireMock CLI
         run: npx --yes @wiremock/cli --version
 
-      - name: Pull mock API from WireMock Cloud
+      - name: Authenticate with WireMock Cloud
         env:
           WIREMOCK_API_TOKEN: ${{ secrets.WIREMOCK_API_TOKEN }}
+        run: npx --yes @wiremock/cli config set api_token "$WIREMOCK_API_TOKEN"
+
+      - name: Pull mock API from WireMock Cloud
         run: npx --yes @wiremock/cli pull mock-api k59q9 --into example-mock-api
 
       - name: Start WireMock local playback
