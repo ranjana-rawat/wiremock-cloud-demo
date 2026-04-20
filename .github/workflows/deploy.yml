@@ -8,6 +8,11 @@ on:
 jobs:
   test-with-mocks:
     runs-on: ubuntu-latest
+
+    env:
+      WIREMOCK_API_TOKEN: ${{ secrets.WIREMOCK_API_TOKEN }}
+
+      
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,9 +31,6 @@ jobs:
 
       - name: Install WireMock CLI
         run: npx --yes @wiremock/cli --version
-
-      - name: Authenticate with WireMock Cloud
-        run: npx --yes @wiremock/cli config set api_token "${{ secrets.WIREMOCK_API_TOKEN }}"
 
       - name: Pull mock API from WireMock Cloud
         run: npx --yes @wiremock/cli pull mock-api k59q9 --into example-mock-api
